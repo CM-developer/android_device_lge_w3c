@@ -1,0 +1,27 @@
+on post-fs-data
+#2013.06.20 LGE_CHANGE_S youngmin.kwon@lge.com, thermal senario change about LCD brightness
+chown system system /sys/class/leds/lcd-backlight/thermald_status
+chmod 0644 /sys/class/leds/lcd-backlight/thermald_status
+#2013.06.20 LGE_CHANGE_E youngmin.kwon@lge.com, thermal senario change about LCD brightness
+
+on boot
+# [LGE_VPN]Inside Secure VPN Kernel Module install
+   insmod /system/lib/modules/vpnclient.ko ssh_procfs_uid=1000 ssh_procfs_gid=1000
+
+service vpnclientpm /system/bin/vpnclientpm -O /data/data/com.ipsec.vpnclient/vpnclientpm.txt -D*Pm*=99,*Netconfig*=99 -K*=99 -u 1000
+   # uid dropped to system when capabilities are set
+     class main
+     group system net_admin net_raw
+     disabled
+
+service secstarter /system/bin/secstarter
+     class main
+     user system
+     group system net_admin net_raw
+# [LGE_VPN]Inside Secure VPN Kernel Module install
+
+# FIPS for data encryption
+service ufips /system/bin/ufips
+    class core 
+    user system 
+    group system

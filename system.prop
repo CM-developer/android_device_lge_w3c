@@ -1,3 +1,22 @@
 #
 # system.prop for w3c
 #
+
+keyguard.no_require_sim=true
+ro.com.android.dataroaming=true
+ro.com.android.dateformat=MM-dd-yyyy
+ro.config.alarm_alert=Argon.ogg
+ro.config.ringtone=Orion.ogg
+ro.config.notification_sound=
+ro.carrier=unknown
+ro.com.google.clientidbase=android-google
+ro.url.legal=http://www.google.com/intl/%s/mobile/android/basic/phone-legal.html
+ro.com.android.wifi-watchlist=GoogleGuest
+ro.setupwizard.enterprise_mode=1
+persist.sys.root_access=1
+ro.modversion=OmniROM-4.4.4-20160921-l34c-HOMEMADE
+ro.omni.version=4.4.4-20160921-l34c-HOMEMADE
+persist.sys.dalvik.vm.lib=libdvm.so
+ro.kernel.android.checkjni=1
+net.bt.name=Android
+dalvik.vm.stack-trace-file=/data/anr/traces.txt

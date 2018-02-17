@@ -1,0 +1,219 @@
+import /init.gammaw.rc
+import /init.w3c.usb.rc
+import /init.w3c_product.rc
+
+on early-init
+    mkdir /firmware 0771 system system
+    symlink /data/tombstones /tombstones
+#    write /sys/kernel/mm/ksm/pages_to_scan 100
+#    write /sys/kernel/mm/ksm/sleep_millisecs 500
+#    write /sys/kernel/mm/ksm/run 1
+#    write /sys/block/zram0/disksize 192M
+
+on init
+
+# Begin Immersion changes
+    export VIBE_PIPE_PATH /dev/pipes
+    mkdir /dev/pipes 0771 shell shell
+# End Immersion changes
+
+# LGE_UPDATE_START, 2013/10/1, for eri partition of VZW based operators, p1-fs@lge.com
+    wait /dev/block/platform/msm_sdcc.1/by-name/eri 
+    exec /sbin/setup_fs_static /dev/block/platform/msm_sdcc.1/by-name/eri no_reboot  
+# LGE_UPDATE_END, 2013/10/1, for eri partition of VZW based operators, p1-fs@lge.com
+
+on fs
+    mount_all fstab.w3c
+    
+    # Executing tune2fs to reserve some region in /data. (40MB)
+    exec /system/bin/tune2fs -u system -r 10240 /dev/block/platform/msm_sdcc.1/by-name/userdata
+
+# LGE_UPDATE_START, 2013/10/1, for eri partition of VZW based operators, p1-fs@lge.com
+    mkdir /eri 0771 system radio 
+    wait /dev/block/platform/msm_sdcc.1/by-name/eri 
+    exec /system/bin/e2fsck -p /dev/block/platform/msm_sdcc.1/by-name/eri 
+    mount ext4 /dev/block/platform/msm_sdcc.1/by-name/eri /eri nodev barrier=1 noauto_da_alloc 
+# LGE_UPDATE_END, 2013/10/1, for eri partition of VZW based operators, p1-fs@lge.com
+
+    # Keeping following partitions outside fstab file. As user may not have
+    # these partition flashed on the device. Failure to mount any partition in fstab file
+    # results in failure to launch late-start class.
+
+    wait /dev/block/platform/msm_sdcc.1/by-name/modem
+    mount vfat /dev/block/platform/msm_sdcc.1/by-name/modem /firmware ro shortname=lower,uid=1000,gid=1000,dmask=227,fmask=337
+
+    write /sys/kernel/boot_adsp/boot 1
+
+# In order to keep plenty of large order chunks.
+#    write /proc/sys/vm/min_free_kbytes 5120
+
+on boot
+#   write /proc/sys/vm/page-cluster 0
+   write /proc/sys/vm/swappiness 100
+
+on post-fs-data
+    mkdir /data/tombstones 0771 system system
+    mkdir /tombstones/modem 0771 system system
+
+# Proxi sensor
+  chown system system /sys/devices/f9925000.i2c/i2c-3/3-0039/enable_ps_sensor
+  chmod 0660  /sys/devices/f9925000.i2c/i2c-3/3-0039/enable_ps_sensor
+  chown system system /sys/devices/f9925000.i2c/i2c-3/3-0039/pilt
+  chmod 0660  /sys/devices/f9925000.i2c/i2c-3/3-0039/pilt    
+  chown system system /sys/devices/f9925000.i2c/i2c-3/3-0039/piht
+  chmod 0660  /sys/devices/f9925000.i2c/i2c-3/3-0039/piht
+  chown system system /sys/devices/f9925000.i2c/i2c-3/3-0039/run_calibration
+  chmod 0660 /sys/devices/f9925000.i2c/i2c-3/3-0039/run_calibration
+  chown system system /sys/devices/f9925000.i2c/i2c-3/3-0039/prox_cal_data
+  chmod 0660  /sys/devices/f9925000.i2c/i2c-3/3-0039/prox_cal_data
+  chown system system /sys/devices/f9925000.i2c/i2c-3/3-0039/pdata
+  chmod 0660  /sys/devices/f9925000.i2c/i2c-3/3-0039/pdata 
+
+# LGE_UPDATE_START, 2013/10/1, for eri partition of VZW based operators, p1-fs@lge.com
+    chown system radio /eri 
+    chmod 771 /eri 
+# LGE_UPDATE_END, 2013/10/1, for eri partition of VZW based operators, p1-fs@lge.com
+
+# This is requested by VZW. Do not refer or copy below. This is for only VZW.
+    setprop ro.device.memory.system  0
+    setprop ro.device.memory.internal 4
+
+# Allow usb charging to be disabled persistently
+on property:persist.usb.chgdisabled=1
+    write /sys/class/power_supply/battery/charging_enabled 0
+
+on property:persist.usb.chgdisabled=0
+    write /sys/class/power_supply/battery/charging_enabled 1
+
+on boot
+    insmod /system/lib/modules/adsprpc.ko
+	chown system system /sys/class/power_supply/battery/pseudo_batt
+
+#SELinux, partition labeling, security-selinux-task@lge.com
+    restorecon /eri
+
+#LGE_CHANGE_S, for LP5521 RGB_LED
+	chown system system /sys/class/leds/R/device/led_current_index
+	chown system system /sys/class/leds/R/device/led_pattern
+	chown system system /sys/class/leds/R/device/led_blink
+	chown system system /sys/class/leds/R/brightness
+	chown system system /sys/class/leds/G/brightness
+	chown system system /sys/class/leds/B/brightness
+	chown system system /sys/class/leds/R/led_current
+	chown system system /sys/class/leds/G/led_current
+	chown system system /sys/class/leds/B/led_current
+#LGE_CHANGE_E, for LP5521 RGB_LED
+
+/* LGE_CHANGE_S : 2013-02-20 sungmin.cho@lge.com for setting antibanding in runtime */
+   chown media media /sys/bus/i2c/drivers/hi351/6-0040/antibanding
+/* LGE_CHANGE_E : 2013-02-20 sungmin.cho@lge.com for setting antibanding in runtime */
+
+on property:persist.service.fakebatt=1
+    write /sys/class/power_supply/battery/pseudo_batt "1 1 100 40 4100 80 1"
+
+on property:persist.service.fakebatt=0
+    write /sys/class/power_supply/battery/pseudo_batt "0 1 100 40 4100 80 1"
+
+service time_daemon /system/bin/time_daemon
+   class late_start
+   user root
+   group root
+
+service mpdecision /system/bin/mpdecision --no_sleep --avg_comp
+   user root
+   disabled
+
+#LGE_CHANGE_S,[beopmo.kim],2013-12-26,To disable gsiff_daemon
+#start GNSS/Sensor interface daemon
+#service gsiff_daemon /system/bin/gsiff_daemon
+#   class late_start
+#   user system
+#   group gps net_raw
+#LGE_CHANGE_E,[beopmo.kim],2013-12-26,To disable gsiff_daemon
+
+service thermal-engine /system/bin/thermal-engine
+   class main
+   user root
+   group root
+
+service qseecomd /system/bin/qseecomd
+	class late_start
+	user root
+	group root
+   
+# Begin Immersion changes
+service immvibed /system/bin/immvibed
+    class main
+    user shell
+    group shell system
+    oneshot
+# End Immersion changes
+
+service qrngd /system/bin/qrngd -f
+   class main
+   user root
+   group root
+
+service qrngp /system/bin/qrngp
+    class main
+    user root
+    group root
+    oneshot
+    disabled
+
+on property:sys.boot_completed=1
+    start qrngp
+
+service sensord /system/bin/sensord  
+    class late_start
+        oneshot 
+
+#start camera server as daemon
+service qcamerasvr /system/bin/mm-qcamera-daemon
+   class late_start
+   user camera
+   group camera system inet input graphics
+
+#LGE_CHANGE_S, restart qcamerasvr when restarting mediaserver and servicemanager, yousung.kang@lge.com
+on property:init.svc.media=restarting
+    restart qcamerasvr
+on property:init.svc.servicemanager=restarting
+    restart qcamerasvr
+#LGE_CHANGE_E, restart qcamerasvr when restarting mediaserver and servicemanager, yousung.kang@lge.com
+
+#service swapping /system/bin/sh /system/etc/enable_swap.sh
+#    class core
+#    user root
+#    oneshot
+
+service adsprpcd /system/bin/adsprpcd
+   class main
+   user media
+   group media
+
+service wcnss-service /system/bin/wcnss_service
+    class late_start
+    user root
+    group system wifi
+    oneshot
+
+service ppd /system/bin/mm-pp-daemon
+    class late_start
+    user system
+    socket pps stream 0660 system system graphics
+    group system graphics
+
+on property:init.svc.surfaceflinger=stopped
+    stop ppd
+
+service rctd /system/bin/rctd
+   class late_start
+   user root
+   group root
+
+#LGE_UPDATE_S LGE_PM_SMPL_COUNT
+service smpl_count /system/bin/smpl_count
+    class main
+	user root
+	oneshot
+#LGE_UPDATE_E LGE_PM_SMPL_COUNT
